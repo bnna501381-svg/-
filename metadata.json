@@ -1,0 +1,6 @@
+{
+  "name": "냉털식사",
+  "description": "맞춤 다이어트 레시피 추천, 영양성분(탄단지) 관리 및 요리 후 냉장고 재료 자동 차감과 식단 기록 서비스.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

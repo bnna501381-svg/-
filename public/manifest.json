@@ -1,0 +1,17 @@
+{
+  "short_name": "냉털식사",
+  "name": "냉털식사 - 알뜰 다이어트 레시피 & 냉장고 관리",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2310b981'/><text y='.9em' font-size='70' x='15'>🥗</text></svg>",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#f8fafc",
+  "theme_color": "#10b981",
+  "display": "standalone",
+  "orientation": "portrait"
+}
