@@ -41,23 +41,7 @@ export default function App() {
 
   const [logs, setLogs] = useState<MealLog[]>(() => {
     const saved = localStorage.getItem('diet_logs_v1');
-    if (saved) return JSON.parse(saved);
-
-    // Initial mock log for today
-    const todayStr = new Date().toISOString().split('T')[0];
-    return [
-      {
-        id: 'log-1',
-        date: todayStr,
-        time: '08:30',
-        mealType: '아침',
-        recipeTitle: '오트밀 달걀 야채죽',
-        calories: 260,
-        carbs: 28,
-        protein: 15,
-        fat: 8,
-      },
-    ];
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [userProfile, setUserProfile] = useState<UserProfile>(() => {

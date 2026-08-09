@@ -50,8 +50,34 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             </div>
 
-            {/* Desktop Navigation Tabs & Top Right Settings Button */}
+            {/* Header Right Action Buttons */}
             <div className="flex items-center space-x-2">
+              {/* Google Sheets View Button */}
+              {sheetUrl ? (
+                <a
+                  href={sheetUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl text-xs transition-all shadow-xs flex items-center gap-1.5 border border-emerald-500 shrink-0"
+                  title="연동된 Google Sheets 엑셀 파일 열기"
+                >
+                  <Table className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Google Sheets 엑셀 보기</span>
+                  <span className="sm:hidden">시트 보기</span>
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onOpenSettings}
+                  className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold rounded-2xl text-xs transition-all border border-emerald-200/80 flex items-center gap-1.5 shrink-0"
+                  title="Google 계정 및 Sheets 연동하기"
+                >
+                  <Table className="w-3.5 h-3.5 text-emerald-600" />
+                  <span className="hidden sm:inline">Google Sheets 연동 / 보기</span>
+                  <span className="sm:hidden">시트 연동</span>
+                </button>
+              )}
+
               <button
                 id="btn-header-open-settings"
                 onClick={onOpenSettings}
