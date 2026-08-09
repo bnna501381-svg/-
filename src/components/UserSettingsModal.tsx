@@ -313,18 +313,22 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {sheetUrl ? (
-                    <a
-                      href={sheetUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-all shadow-xs flex items-center justify-center gap-1.5"
-                      title="Google Drive 엑셀 파일 열기"
-                    >
-                      <Table className="w-3.5 h-3.5" />
-                      <span>Google Sheets 엑셀 보기</span>
-                    </a>
-                  ) : null}
+                  <a
+                    href={sheetUrl || 'https://docs.google.com/spreadsheets'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => {
+                      if (!sheetUrl) {
+                        e.preventDefault();
+                        if (onManualSync) onManualSync();
+                      }
+                    }}
+                    className="flex-1 py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-all shadow-xs flex items-center justify-center gap-1.5"
+                    title="Google Sheets 엑셀 파일 열기"
+                  >
+                    <Table className="w-3.5 h-3.5" />
+                    <span>Google Sheets 엑셀 보기</span>
+                  </a>
 
                   <button
                     type="button"
