@@ -29,7 +29,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   return (
     <>
-      <header className="sticky top-0 z-30 bg-white/60 backdrop-blur-xl border-b border-white/80 shadow-2xs transition-all">
+      <header className="sticky top-0 z-30 bg-white/60 backdrop-blur-xl border-b border-white/80 shadow-2xs transition-all pt-3 sm:pt-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14 sm:h-16">
             {/* Logo & Title */}
