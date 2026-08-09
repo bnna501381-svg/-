@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MealLog, UserTarget, MealType } from '../types';
+import { MealLog, UserTarget, MealType, Recipe } from '../types';
 import {
   Flame,
   Target,
@@ -12,6 +12,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Settings,
+  RotateCcw,
+  RefreshCw,
 } from 'lucide-react';
 import {
   BarChart,
@@ -27,17 +29,25 @@ import {
 interface TrackerViewProps {
   logs: MealLog[];
   target: UserTarget;
+  deletedRecipes?: Recipe[];
   onUpdateTarget: (target: UserTarget) => void;
   onAddManualLog: (log: Omit<MealLog, 'id'>) => void;
   onDeleteLog: (id: string) => void;
+  onRestoreRecipe?: (recipeId: string) => void;
+  onPermanentDeleteRecipe?: (recipeId: string) => void;
+  onEmptyTrashRecipes?: () => void;
 }
 
 export const TrackerView: React.FC<TrackerViewProps> = ({
   logs,
   target,
+  deletedRecipes = [],
   onUpdateTarget,
   onAddManualLog,
   onDeleteLog,
+  onRestoreRecipe,
+  onPermanentDeleteRecipe,
+  onEmptyTrashRecipes,
 }) => {
   // Date State (default to today YYYY-MM-DD)
   const [selectedDate, setSelectedDate] = useState<string>(
@@ -45,6 +55,7 @@ export const TrackerView: React.FC<TrackerViewProps> = ({
   );
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isManualLogOpen, setIsManualLogOpen] = useState(false);
+  const [isTrashOpen, setIsTrashOpen] = useState(false);
 
   // Target Edit state
   const [editTargetCal, setEditTargetCal] = useState(target.targetCalories);
@@ -166,7 +177,21 @@ export const TrackerView: React.FC<TrackerViewProps> = ({
           </button>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setIsTrashOpen(true)}
+            className="inline-flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/80 transition-colors relative"
+            title="삭제된 레시피 휴지통"
+          >
+            <Trash2 className="w-4 h-4 text-rose-600" />
+            <span>휴지통</span>
+            {deletedRecipes.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-rose-600 text-white">
+                {deletedRecipes.length}
+              </span>
+            )}
+          </button>
+
           <button
             onClick={() => setIsManualLogOpen(true)}
             className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 transition-colors"
@@ -551,6 +576,97 @@ export const TrackerView: React.FC<TrackerViewProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Trash Modal (삭제된 레시피 휴지통) */}
+      {isTrashOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full max-h-[85vh] flex flex-col p-5 sm:p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0">
+              <div className="flex items-center space-x-2">
+                <div className="p-2 bg-rose-100 text-rose-700 rounded-xl">
+                  <Trash2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900">삭제된 레시피 휴지통</h3>
+                  <p className="text-xs text-slate-500">삭제된 레시피는 시트에서도 '삭제됨' 상태로 기록됩니다.</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsTrashOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 text-xl font-bold rounded-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="my-4 overflow-y-auto space-y-3 flex-1 pr-1">
+              {deletedRecipes.length === 0 ? (
+                <div className="py-12 text-center text-slate-400 space-y-2">
+                  <Trash2 className="w-10 h-10 mx-auto text-slate-300 stroke-[1.5]" />
+                  <p className="text-xs sm:text-sm font-semibold text-slate-500">휴지통이 비어있습니다.</p>
+                  <p className="text-[11px] text-slate-400">레시피 카드에서 삭제한 항목이 이곳에 보관됩니다.</p>
+                </div>
+              ) : (
+                deletedRecipes.map((recipe) => (
+                  <div
+                    key={recipe.id}
+                    className="p-3.5 bg-slate-50 hover:bg-slate-100/80 rounded-2xl border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center space-x-2">
+                        <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-200 text-slate-700">
+                          {recipe.dietType}
+                        </span>
+                        <span className="text-xs font-extrabold text-amber-600">{recipe.calories} kcal</span>
+                      </div>
+                      <h4 className="text-sm font-bold text-slate-900 leading-snug">{recipe.title}</h4>
+                      {recipe.deletedAt && (
+                        <p className="text-[10px] text-slate-400">삭제일시: {recipe.deletedAt}</p>
+                      )}
+                    </div>
+
+                    <div className="flex items-center space-x-2 shrink-0">
+                      {onRestoreRecipe && (
+                        <button
+                          onClick={() => onRestoreRecipe(recipe.id)}
+                          className="px-3 py-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl flex items-center space-x-1 transition-all"
+                          title="레시피 복구"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          <span>복구</span>
+                        </button>
+                      )}
+
+                      {onPermanentDeleteRecipe && (
+                        <button
+                          onClick={() => onPermanentDeleteRecipe(recipe.id)}
+                          className="px-2.5 py-1.5 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl flex items-center space-x-1 transition-all"
+                          title="영구 삭제"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>삭제</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {deletedRecipes.length > 0 && (
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between shrink-0">
+                <span className="text-xs text-slate-500 font-medium">총 {deletedRecipes.length}개 보관 중</span>
+                <button
+                  onClick={() => onEmptyTrashRecipes?.()}
+                  className="px-3 py-1.5 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-all"
+                >
+                  휴지통 전체 비우기
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

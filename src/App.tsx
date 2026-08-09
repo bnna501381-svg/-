@@ -667,6 +667,40 @@ export default function App() {
     );
   };
 
+  // --- Recipe Deletion & Trash Bin Handlers ---
+  const handleDeleteRecipe = (recipeId: string) => {
+    const deletedTime = new Date().toLocaleString('ko-KR', {
+      month: 'numeric',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    setRecipes((prev) =>
+      prev.map((r) => (r.id === recipeId ? { ...r, isDeleted: true, deletedAt: deletedTime } : r))
+    );
+    showToast(
+      '레시피가 휴지통으로 이동되었습니다. [식단기록] 탭의 휴지통에서 언제든 복구할 수 있습니다.',
+      'info'
+    );
+  };
+
+  const handleRestoreRecipe = (recipeId: string) => {
+    setRecipes((prev) =>
+      prev.map((r) => (r.id === recipeId ? { ...r, isDeleted: false, deletedAt: undefined } : r))
+    );
+    showToast('레시피가 복구되었습니다.', 'success');
+  };
+
+  const handlePermanentDeleteRecipe = (recipeId: string) => {
+    setRecipes((prev) => prev.filter((r) => r.id !== recipeId));
+    showToast('레시피가 영구 삭제되었습니다.', 'info');
+  };
+
+  const handleEmptyTrashRecipes = () => {
+    setRecipes((prev) => prev.filter((r) => !r.isDeleted));
+    showToast('휴지통을 모두 비웠습니다.', 'info');
+  };
+
   // --- Shopping List Handlers ---
   const handleDeleteShoppingItem = (id: string) => {
     setShoppingItems((prev) => prev.filter((item) => item.id !== id));
@@ -770,6 +804,7 @@ export default function App() {
             ingredients={ingredients}
             onGenerateAiRecipes={handleGenerateAiRecipes}
             onCookRecipe={handleStartCookRecipe}
+            onDeleteRecipe={handleDeleteRecipe}
             onToggleIngredient={handleToggleSelectIngredient}
             isGenerating={isGeneratingAiRecipes}
           />
@@ -779,6 +814,7 @@ export default function App() {
           <TrackerView
             logs={logs}
             target={userTarget}
+            deletedRecipes={recipes.filter((r) => r.isDeleted)}
             onUpdateTarget={setUserTarget}
             onAddManualLog={(log) => {
               const newLog: MealLog = { ...log, id: `log-${Date.now()}` };
@@ -789,6 +825,9 @@ export default function App() {
               setLogs((prev) => prev.filter((l) => l.id !== id));
               showToast('식단 기록이 삭제되었습니다.', 'info');
             }}
+            onRestoreRecipe={handleRestoreRecipe}
+            onPermanentDeleteRecipe={handlePermanentDeleteRecipe}
+            onEmptyTrashRecipes={handleEmptyTrashRecipes}
           />
         )}
 

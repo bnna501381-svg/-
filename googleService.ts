@@ -99,8 +99,8 @@ async function initializeSheetsHeader(accessToken: string, spreadsheetId: string
       values: [['아이디', '재료명', '카테고리', '수량', '단위', '보관장소', '소비기한(D-Day)', '상태', '등록일']],
     },
     {
-      range: '추천 레시피!A1:M1',
-      values: [['아이디', '레시피명', '설명', '칼로리(kcal)', '탄수화물(g)', '단백질(g)', '지방(g)', '다이어트유형', '난이도', '조리시간(분)', '사용재료', '필요부재료', '조리순서']],
+      range: '추천 레시피!A1:N1',
+      values: [['아이디', '레시피명', '설명', '칼로리(kcal)', '탄수화물(g)', '단백질(g)', '지방(g)', '다이어트유형', '난이도', '조리시간(분)', '사용재료', '필요부재료', '조리순서', '상태']],
     },
     {
       range: '식사 기록!A1:H1',
@@ -153,7 +153,7 @@ export async function syncToGoogleSheets(accessToken: string, data: SyncDataPayl
   ];
 
   const recipeRows = [
-    ['아이디', '레시피명', '설명', '칼로리(kcal)', '탄수화물(g)', '단백질(g)', '지방(g)', '다이어트유형', '난이도', '조리시간(분)', '사용재료', '필요부재료', '조리순서'],
+    ['아이디', '레시피명', '설명', '칼로리(kcal)', '탄수화물(g)', '단백질(g)', '지방(g)', '다이어트유형', '난이도', '조리시간(분)', '사용재료', '필요부재료', '조리순서', '상태'],
     ...(data.recipes || []).map((recipe) => [
       recipe.id || '',
       recipe.title || '',
@@ -168,6 +168,7 @@ export async function syncToGoogleSheets(accessToken: string, data: SyncDataPayl
       JSON.stringify(recipe.usedIngredients || []),
       JSON.stringify(recipe.neededIngredients || []),
       JSON.stringify(recipe.steps || []),
+      recipe.isDeleted ? '삭제됨' : '사용중',
     ]),
   ];
 
@@ -225,7 +226,7 @@ export async function syncToGoogleSheets(accessToken: string, data: SyncDataPayl
       valueInputOption: 'USER_ENTERED',
       data: [
         { range: '냉장고 재료!A1:I500', values: fridgeRows },
-        { range: '추천 레시피!A1:M500', values: recipeRows },
+        { range: '추천 레시피!A1:N500', values: recipeRows },
         { range: '식사 기록!A1:H500', values: logRows },
         { range: '지출 내역!A1:F500', values: shoppingRows },
         { range: '사용자 프로필!A1:J10', values: profileRows },
@@ -249,7 +250,7 @@ export async function loadFromGoogleSheets(accessToken: string) {
 
   const ranges = [
     '냉장고 재료!A2:I500',
-    '추천 레시피!A2:M500',
+    '추천 레시피!A2:N500',
     '식사 기록!A2:H500',
     '지출 내역!A2:F500',
     '사용자 프로필!A2:J10',
@@ -311,6 +312,7 @@ export async function loadFromGoogleSheets(accessToken: string) {
     steps: parseJsonSafe(r[12], []),
     chefTip: 'Google Sheets 동기화 레시피',
     isAiGenerated: true,
+    isDeleted: r[13] === '삭제됨' || r[13] === '삭제',
   }));
 
   // Parse Logs

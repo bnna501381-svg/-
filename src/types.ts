@@ -42,6 +42,8 @@ export interface Recipe {
   chefTip?: string;
   isAiGenerated?: boolean;
   matchScore?: number; // 0-100%
+  isDeleted?: boolean;
+  deletedAt?: string;
 }
 
 export type MealType = '아침' | '점심' | '저녁' | '간식';
