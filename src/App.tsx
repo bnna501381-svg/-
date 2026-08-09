@@ -12,6 +12,7 @@ import {
 } from './types';
 import { INITIAL_INGREDIENTS } from './data/initialIngredients';
 import { DEFAULT_RECIPES } from './data/defaultRecipes';
+import { formatIngredientForFridge } from './utils/ingredientParser';
 import { Header } from './components/Header';
 import { FridgeView } from './components/FridgeView';
 import { RecipeView } from './components/RecipeView';
@@ -326,14 +327,19 @@ export default function App() {
 
   // --- Fridge Handlers ---
   const handleAddIngredient = (item: Omit<Ingredient, 'id' | 'addedAt'>) => {
+    const formatted = formatIngredientForFridge(item.name, item.quantity, item.unit);
     const newItem: Ingredient = {
       ...item,
+      name: formatted.name,
+      category: item.category && item.category !== '양념/기타' ? item.category : formatted.category,
+      quantity: formatted.quantity,
+      unit: formatted.unit,
       id: `ing-${Date.now()}`,
       addedAt: new Date().toISOString().split('T')[0],
       isPending: false, // direct add is active
     };
     setIngredients((prev) => [newItem, ...prev]);
-    showToast(`'${newItem.name}' 재료가 냉장고에 등록되었습니다.`, 'success');
+    showToast(`'${newItem.name}' (${newItem.quantity}${newItem.unit}) 재료가 냉장고에 등록되었습니다.`, 'success');
   };
 
   const handleConfirmPendingIngredient = (id: string) => {
@@ -452,16 +458,19 @@ export default function App() {
 
       const data = await res.json();
       if (data.ingredients && data.ingredients.length > 0) {
-        const parsedItems: Ingredient[] = data.ingredients.map((item: any, idx: number) => ({
-          id: `ing-ai-${Date.now()}-${idx}`,
-          name: item.name,
-          category: item.category || '양념/기타',
-          quantity: item.quantity || 1,
-          unit: item.unit || '개',
-          isSelected: true,
-          addedAt: new Date().toISOString().split('T')[0],
-          isPending: true, // 1단계 예비 리스트에 추가
-        }));
+        const parsedItems: Ingredient[] = data.ingredients.map((item: any, idx: number) => {
+          const formatted = formatIngredientForFridge(item.name, item.quantity, item.unit);
+          return {
+            id: `ing-ai-${Date.now()}-${idx}`,
+            name: formatted.name,
+            category: formatted.category || item.category || '양념/기타',
+            quantity: formatted.quantity,
+            unit: formatted.unit,
+            isSelected: true,
+            addedAt: new Date().toISOString().split('T')[0],
+            isPending: true, // 1단계 예비 리스트에 추가
+          };
+        });
 
         setIngredients((prev) => [...parsedItems, ...prev]);
         showToast(
@@ -486,16 +495,19 @@ export default function App() {
 
       const data = await res.json();
       if (data.ingredients && data.ingredients.length > 0) {
-        const parsedItems: Ingredient[] = data.ingredients.map((item: any, idx: number) => ({
-          id: `ing-receipt-${Date.now()}-${idx}`,
-          name: item.name,
-          category: item.category || '양념/기타',
-          quantity: item.quantity || 1,
-          unit: item.unit || '개',
-          isSelected: true,
-          addedAt: new Date().toISOString().split('T')[0],
-          isPending: true, // 1단계 예비 리스트에 추가
-        }));
+        const parsedItems: Ingredient[] = data.ingredients.map((item: any, idx: number) => {
+          const formatted = formatIngredientForFridge(item.name, item.quantity, item.unit);
+          return {
+            id: `ing-receipt-${Date.now()}-${idx}`,
+            name: formatted.name,
+            category: formatted.category || item.category || '양념/기타',
+            quantity: formatted.quantity,
+            unit: formatted.unit,
+            isSelected: true,
+            addedAt: new Date().toISOString().split('T')[0],
+            isPending: true, // 1단계 예비 리스트에 추가
+          };
+        });
 
         setIngredients((prev) => [...parsedItems, ...prev]);
         showToast(
@@ -571,12 +583,14 @@ export default function App() {
           if (!isNaN(parsed) && parsed > 0) priceNum = parsed;
         }
 
+        const formatted = formatIngredientForFridge(ing.name, ing.quantity);
+
         return {
           id: `ing-pending-${Date.now()}-${idx}`,
-          name: ing.name,
-          category: '양념/기타',
-          quantity: 1,
-          unit: ing.quantity || '개',
+          name: formatted.name,
+          category: formatted.category,
+          quantity: formatted.quantity,
+          unit: formatted.unit,
           isSelected: true,
           addedAt: new Date().toISOString().split('T')[0],
           isPending: true, // 1단계 예비 리스트

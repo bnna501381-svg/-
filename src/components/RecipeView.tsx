@@ -136,6 +136,43 @@ export const RecipeView: React.FC<RecipeViewProps> = ({
       }
     });
 
+    // Fallback: If combinedNeeded is empty AND realUsed is empty (e.g. lost in sync or empty fridge), infer from recipe title/description
+    if (combinedNeeded.length === 0 && realUsed.length === 0) {
+      const textToSearch = (recipe.title + ' ' + recipe.description).toLowerCase();
+      const keywords = [
+        { key: '닭가슴살', name: '닭가슴살 1팩', price: '5,900원' },
+        { key: '야채', name: '모둠 볶음 채소 1봉지', price: '2,200원' },
+        { key: '채소', name: '모둠 볶음 채소 1봉지', price: '2,200원' },
+        { key: '두부', name: '부침용 두부 1모', price: '1,800원' },
+        { key: '계란', name: '신선 계란 1팩(10구)', price: '3,800원' },
+        { key: '달걀', name: '신선 계란 1팩(10구)', price: '3,800원' },
+        { key: '양배추', name: '양배추 1/2통', price: '2,500원' },
+        { key: '참치', name: '살코기 참치 1캔', price: '2,800원' },
+        { key: '토마토', name: '방울토마토 1팩', price: '4,500원' },
+        { key: '간장', name: '양념용 진간장 1병', price: '3,500원' },
+        { key: '김치', name: '맛김치 1봉', price: '4,200원' },
+        { key: '밥', name: '즉석밥 1개', price: '1,800원' },
+      ];
+      keywords.forEach((item) => {
+        if (textToSearch.includes(item.key)) {
+          if (!combinedNeeded.some((n) => n.name.includes(item.key))) {
+            combinedNeeded.push({
+              name: item.name,
+              quantity: '1개',
+              estimatedPrice: item.price,
+            });
+          }
+        }
+      });
+      if (combinedNeeded.length === 0 && activeIngredients.length === 0) {
+        combinedNeeded.push({
+          name: '주요 요리 재료 (장보기 필요)',
+          quantity: '1세트',
+          estimatedPrice: '약 5,000원~8,000원',
+        });
+      }
+    }
+
     return {
       ...recipe,
       usedIngredients: realUsed,
@@ -233,13 +270,17 @@ export const RecipeView: React.FC<RecipeViewProps> = ({
     .map((i) => i.name.toLowerCase());
 
   const getRecipeExtraCost = (recipe: Recipe) => {
-    if (!recipe.neededIngredients || recipe.neededIngredients.length === 0) return 0;
-    return recipe.neededIngredients.reduce((sum, ing) => {
+    if (!recipe.neededIngredients || recipe.neededIngredients.length === 0) {
+      if (activeIngredients.length === 0) return 5000;
+      return 0;
+    }
+    const cost = recipe.neededIngredients.reduce((sum, ing) => {
       const priceStr = ing.estimatedPrice;
       if (!priceStr) return sum;
       const parsed = parseInt(priceStr.replace(/[^0-9]/g, ''), 10);
       return sum + (isNaN(parsed) ? 0 : parsed);
     }, 0);
+    return cost === 0 && activeIngredients.length === 0 ? 5000 : cost;
   };
 
   const getMatchScore = (recipe: Recipe) => {
@@ -354,13 +395,13 @@ export const RecipeView: React.FC<RecipeViewProps> = ({
                       {currentRecipe.dietType}
                     </span>
 
-                    {getRecipeExtraCost(currentRecipe) === 0 ? (
+                    {getRecipeExtraCost(currentRecipe) === 0 && activeIngredients.length > 0 ? (
                       <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300/80 shadow-2xs flex items-center gap-1">
                         🎉 추가 지출 0원! (냉장고 재료 100% 파먹기)
                       </span>
                     ) : (
                       <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-200/80 flex items-center gap-1">
-                        🛒 추가 예상 비용: ~{getRecipeExtraCost(currentRecipe).toLocaleString()}원
+                        🛒 추가 예상 비용: ~{getRecipeExtraCost(currentRecipe).toLocaleString()}원 (장보기 필요)
                       </span>
                     )}
                   </div>
@@ -427,6 +468,10 @@ export const RecipeView: React.FC<RecipeViewProps> = ({
                           {ing.name} ({ing.estimatedPrice || ing.quantity})
                         </span>
                       ))
+                    ) : activeIngredients.length === 0 ? (
+                      <span className="text-[11px] font-bold text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-lg border border-amber-200">
+                        🛒 전체 재료 장보기 필요 (냉장고 비어있음)
+                      </span>
                     ) : (
                       <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-200">
                         모든 재료 보유 중 (추가 지출 0원)
@@ -569,6 +614,8 @@ export const RecipeView: React.FC<RecipeViewProps> = ({
                           </span>
                         ))}
                       </div>
+                    ) : activeIngredients.length === 0 ? (
+                      <span className="text-amber-800 font-bold text-[11px]">전체 재료 장보기 필요 (냉장고 비어있음)</span>
                     ) : (
                       <span className="text-emerald-700 font-bold text-[11px]">추가 구매 필요한 재료 없음 (100% 보유 중)</span>
                     )}

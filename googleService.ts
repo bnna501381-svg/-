@@ -90,8 +90,8 @@ async function initializeSheetsHeader(sheets: any, spreadsheetId: string) {
       values: [['아이디', '재료명', '카테고리', '수량', '단위', '보관장소', '소비기한(D-Day)', '상태', '등록일']],
     },
     {
-      range: '추천 레시피!A1:J1',
-      values: [['아이디', '레시피명', '설명', '칼로리(kcal)', '탄수화물(g)', '단백질(g)', '지방(g)', '다이어트유형', '난이도', '조리시간(분)']],
+      range: '추천 레시피!A1:M1',
+      values: [['아이디', '레시피명', '설명', '칼로리(kcal)', '탄수화물(g)', '단백질(g)', '지방(g)', '다이어트유형', '난이도', '조리시간(분)', '사용재료', '필요부재료', '조리순서']],
     },
     {
       range: '식사 기록!A1:H1',
@@ -137,7 +137,7 @@ export async function syncToGoogleSheets(accessToken: string, data: SyncDataPayl
   ];
 
   const recipeRows = [
-    ['아이디', '레시피명', '설명', '칼로리(kcal)', '탄수화물(g)', '단백질(g)', '지방(g)', '다이어트유형', '난이도', '조리시간(분)'],
+    ['아이디', '레시피명', '설명', '칼로리(kcal)', '탄수화물(g)', '단백질(g)', '지방(g)', '다이어트유형', '난이도', '조리시간(분)', '사용재료', '필요부재료', '조리순서'],
     ...(data.recipes || []).map((recipe) => [
       recipe.id || '',
       recipe.title || '',
@@ -149,6 +149,9 @@ export async function syncToGoogleSheets(accessToken: string, data: SyncDataPayl
       recipe.dietType || '',
       recipe.difficulty || '',
       recipe.prepTimeMinutes || 0,
+      JSON.stringify(recipe.usedIngredients || []),
+      JSON.stringify(recipe.neededIngredients || []),
+      JSON.stringify(recipe.steps || []),
     ]),
   ];
 
@@ -203,7 +206,7 @@ export async function syncToGoogleSheets(accessToken: string, data: SyncDataPayl
       valueInputOption: 'USER_ENTERED',
       data: [
         { range: '냉장고 재료!A1:I500', values: fridgeRows },
-        { range: '추천 레시피!A1:J500', values: recipeRows },
+        { range: '추천 레시피!A1:M500', values: recipeRows },
         { range: '식사 기록!A1:H500', values: logRows },
         { range: '지출 내역!A1:F500', values: shoppingRows },
         { range: '사용자 프로필!A1:J10', values: profileRows },
@@ -223,7 +226,7 @@ export async function loadFromGoogleSheets(accessToken: string) {
     spreadsheetId,
     ranges: [
       '냉장고 재료!A2:I500',
-      '추천 레시피!A2:J500',
+      '추천 레시피!A2:M500',
       '식사 기록!A2:H500',
       '지출 내역!A2:F500',
       '사용자 프로필!A2:J10',
@@ -248,6 +251,13 @@ export async function loadFromGoogleSheets(accessToken: string) {
 
   // Parse Recipes
   const recipeRows = valueRanges[1]?.values || [];
+  const parseJsonSafe = (str: string, fallback: any) => {
+    try {
+      return str ? JSON.parse(str) : fallback;
+    } catch {
+      return fallback;
+    }
+  };
   const recipes = recipeRows.map((r) => ({
     id: r[0] || `r-${Math.random().toString(36).substr(2, 9)}`,
     title: r[1] || '',
@@ -259,9 +269,9 @@ export async function loadFromGoogleSheets(accessToken: string) {
     dietType: r[7] || '전체',
     difficulty: r[8] || '보통',
     prepTimeMinutes: Number(r[9]) || 15,
-    usedIngredients: [],
-    neededIngredients: [],
-    steps: [],
+    usedIngredients: parseJsonSafe(r[10], []),
+    neededIngredients: parseJsonSafe(r[11], []),
+    steps: parseJsonSafe(r[12], []),
     chefTip: 'Google Sheets 동기화 레시피',
     isAiGenerated: true,
   }));

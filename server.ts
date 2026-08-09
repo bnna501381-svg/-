@@ -563,8 +563,8 @@ function getFallbackAiRecipes(ingredients: string[], dietType?: string) {
         usedIngredients: [],
         neededIngredients: [
           { name: '부침용 두부', quantity: '1모', estimatedPrice: '1,800원' },
-          { name: '신선 계란(10구)', quantity: '1팩', estimatedPrice: '3,800원' },
-          { name: '곤약 현미밥(3개입)', quantity: '1번들', estimatedPrice: '3,900원' },
+          { name: '계란 1팩(10구)', quantity: '10개', estimatedPrice: '3,800원' },
+          { name: '곤약 현미밥(3개입)', quantity: '3개', estimatedPrice: '3,900원' },
         ],
         steps: [
           '두부는 수분을 제거하고 칼등으로 부드럽게 으깹니다.',
@@ -587,9 +587,9 @@ function getFallbackAiRecipes(ingredients: string[], dietType?: string) {
         dietType: '저탄고지',
         usedIngredients: [],
         neededIngredients: [
-          { name: '달콤 한끼 고구마', quantity: '1봉지(1kg)', estimatedPrice: '4,500원' },
-          { name: '신선 계란(10구)', quantity: '1팩', estimatedPrice: '3,800원' },
-          { name: '팩 방울토마토', quantity: '1팩(500g)', estimatedPrice: '4,200원' },
+          { name: '달콤 한끼 고구마', quantity: '1봉지', estimatedPrice: '4,500원' },
+          { name: '계란 1팩(10구)', quantity: '10개', estimatedPrice: '3,800원' },
+          { name: '팩 방울토마토', quantity: '1팩', estimatedPrice: '4,200원' },
         ],
         steps: [
           '고구마는 전자레인지용 용기에 담아 4~5분간 촉촉하게 찝니다.',
