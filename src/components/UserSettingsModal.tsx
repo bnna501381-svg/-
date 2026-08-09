@@ -11,6 +11,7 @@ interface UserSettingsModalProps {
   sheetUrl?: string | null;
   onManualSync?: () => void;
   onLogout?: () => void;
+  onOpenGoogleLogin?: () => void;
   isSyncing?: boolean;
 }
 
@@ -23,6 +24,7 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
   sheetUrl,
   onManualSync,
   onLogout,
+  onOpenGoogleLogin,
   isSyncing,
 }) => {
   const [height, setHeight] = useState<number | ''>(userProfile.height || 170);
@@ -342,9 +344,21 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
                 </div>
               </div>
             ) : (
-              <p className="text-xs text-slate-500">
-                구글 계정에 로그인하면 냉장고 및 식단 데이터가 Google Sheets 엑셀로 자동 백업됩니다.
-              </p>
+              <div className="space-y-2">
+                <p className="text-xs text-slate-500">
+                  구글 계정에 연동하면 냉장고 및 식단 데이터가 Google Sheets 엑셀 표로 자동 연동되고 백업됩니다.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onOpenGoogleLogin) onOpenGoogleLogin();
+                  }}
+                  className="w-full py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold rounded-xl text-xs transition-all shadow-xs flex items-center justify-center gap-2"
+                >
+                  <Table className="w-4 h-4 text-emerald-200" />
+                  <span>Google Sheets 엑셀 연동하기</span>
+                </button>
+              </div>
             )}
           </div>
         </div>

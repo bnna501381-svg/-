@@ -30,13 +30,25 @@ export default function App() {
 
   // Persistence Key States
   const [ingredients, setIngredients] = useState<Ingredient[]>(() => {
-    const saved = localStorage.getItem('fridge_ingredients_v1');
-    return saved ? JSON.parse(saved) : INITIAL_INGREDIENTS;
+    // Purge old v1 cached mock items
+    localStorage.removeItem('fridge_ingredients_v1');
+    const saved = localStorage.getItem('fridge_ingredients_v2');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Filter out legacy mock items if still present
+      return parsed.filter((item: Ingredient) => !/^ing-[1-9]$|^ing-1[0-2]$/.test(item.id));
+    }
+    return INITIAL_INGREDIENTS;
   });
 
   const [recipes, setRecipes] = useState<Recipe[]>(() => {
-    const saved = localStorage.getItem('fridge_recipes_v1');
-    return saved ? JSON.parse(saved) : DEFAULT_RECIPES;
+    localStorage.removeItem('fridge_recipes_v1');
+    const saved = localStorage.getItem('fridge_recipes_v2');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return parsed.filter((item: Recipe) => !/^rec-[1-5]$/.test(item.id));
+    }
+    return DEFAULT_RECIPES;
   });
 
   const [logs, setLogs] = useState<MealLog[]>(() => {
@@ -102,8 +114,9 @@ export default function App() {
         };
   });
 
-  // Modal State for Settings & Cooking
+  // Modal State for Settings & Cooking & Google Login
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isGoogleLoginOpen, setIsGoogleLoginOpen] = useState(false);
   const [cookingRecipe, setCookingRecipe] = useState<Recipe | null>(null);
 
   // Google OAuth & Sheets Sync State
@@ -186,7 +199,10 @@ export default function App() {
   };
 
   const handleManualSync = async () => {
-    if (!googleUser || !googleUser.accessToken) return;
+    if (!googleUser || !googleUser.accessToken) {
+      setIsGoogleLoginOpen(true);
+      return;
+    }
     try {
       setIsSyncing(true);
       showToast('Google Sheets 동기화 중...', 'info');
@@ -210,6 +226,7 @@ export default function App() {
         if (result.webViewLink) {
           setSheetUrl(result.webViewLink);
           localStorage.setItem('google_sheet_url_v1', result.webViewLink);
+          window.open(result.webViewLink, '_blank');
         }
         showToast('Google Sheets에 모든 데이터가 동기화되었습니다.', 'success');
       } else {
@@ -275,11 +292,11 @@ export default function App() {
 
   // Sync state to LocalStorage
   useEffect(() => {
-    localStorage.setItem('fridge_ingredients_v1', JSON.stringify(ingredients));
+    localStorage.setItem('fridge_ingredients_v2', JSON.stringify(ingredients));
   }, [ingredients]);
 
   useEffect(() => {
-    localStorage.setItem('fridge_recipes_v1', JSON.stringify(recipes));
+    localStorage.setItem('fridge_recipes_v2', JSON.stringify(recipes));
   }, [recipes]);
 
   useEffect(() => {
@@ -796,7 +813,15 @@ export default function App() {
         sheetUrl={sheetUrl}
         onManualSync={handleManualSync}
         onLogout={handleLogout}
+        onOpenGoogleLogin={() => setIsGoogleLoginOpen(true)}
         isSyncing={isSyncing}
+      />
+
+      {/* Google OAuth Login & Sheet Setup Modal */}
+      <GoogleLoginModal
+        isOpen={isGoogleLoginOpen}
+        onClose={() => setIsGoogleLoginOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
       />
 
       {/* Cooking Confirmation & Deduction Modal */}

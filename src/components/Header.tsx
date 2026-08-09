@@ -56,10 +56,11 @@ export const Header: React.FC<HeaderProps> = ({
                 id="btn-header-open-settings"
                 onClick={onOpenSettings}
                 className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl transition-all border border-slate-200/80 shadow-2xs flex items-center justify-center"
-                title="신체 스펙 및 1끼 다이어트 영양 설정"
+                title="설정 및 Google Sheets 연동"
               >
                 <Settings className="w-4 h-4 text-emerald-600" />
               </button>
+
 
               {/* Desktop Navigation Tabs */}
               <nav className="hidden md:flex items-center space-x-1.5">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Table, ShieldCheck, Smartphone, RefreshCw, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Table, ShieldCheck, Smartphone, RefreshCw, Sparkles, CheckCircle2, X } from 'lucide-react';
 
 interface GoogleUser {
   email: string;
@@ -10,10 +10,11 @@ interface GoogleUser {
 
 interface GoogleLoginModalProps {
   isOpen: boolean;
+  onClose?: () => void;
   onLoginSuccess: (user: GoogleUser) => void;
 }
 
-export const GoogleLoginModal: React.FC<GoogleLoginModalProps> = ({ isOpen, onLoginSuccess }) => {
+export const GoogleLoginModal: React.FC<GoogleLoginModalProps> = ({ isOpen, onClose, onLoginSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState('');
   const [clientId, setClientId] = useState<string>(() => {
@@ -183,6 +184,16 @@ export const GoogleLoginModal: React.FC<GoogleLoginModalProps> = ({ isOpen, onLo
       <div className="bg-white rounded-3xl max-w-md w-full p-7 shadow-2xl border border-slate-100 text-center space-y-6 relative overflow-hidden">
         {/* Decorative Top Accent Bar */}
         <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-emerald-500 via-teal-500 to-green-600" />
+
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors"
+            title="닫기"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
 
         {/* Icon Header */}
         <div className="mx-auto w-16 h-16 rounded-3xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shadow-xs">
