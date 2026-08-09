@@ -7,7 +7,7 @@ import {
   syncToGoogleSheets,
   loadFromGoogleSheets,
   getGoogleUserInfo,
-} from './googleService';
+} from './googleService.js';
 
 dotenv.config();
 
