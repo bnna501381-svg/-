@@ -178,6 +178,11 @@ export default function App() {
           }
         }
         showToast('Google Sheets 데이터 불러오기 완료! 모든 기기에서 연속 사용 가능합니다.', 'success');
+      } else if (res.status === 401) {
+        showToast('구글 계정 인증이 만료되었습니다. 다시 로그인해 주세요.', 'error');
+        setGoogleUser(null);
+        localStorage.removeItem('google_user_v1');
+        setIsSettingsOpen(true);
       }
     } catch (err) {
       console.error(err);
@@ -222,6 +227,16 @@ export default function App() {
           localStorage.setItem('google_sheet_url_v1', result.webViewLink);
         }
         showToast('Google Sheets에 모든 데이터가 동기화되었습니다.', 'success');
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        if (res.status === 401 || errData.error === 'EXPIRED_TOKEN') {
+          showToast('구글 인증이 만료되었습니다. 다시 로그인해 주세요.', 'error');
+          setGoogleUser(null);
+          localStorage.removeItem('google_user_v1');
+          setIsSettingsOpen(true);
+        } else {
+          showToast(errData.message || '동기화 중 오류가 발생했습니다.', 'error');
+        }
       }
     } catch (err) {
       console.error(err);
@@ -259,6 +274,9 @@ export default function App() {
             setSheetUrl(result.webViewLink);
             localStorage.setItem('google_sheet_url_v1', result.webViewLink);
           }
+        } else if (res.status === 401) {
+          setGoogleUser(null);
+          localStorage.removeItem('google_user_v1');
         }
       } catch (err) {
         console.error('Auto sync error:', err);

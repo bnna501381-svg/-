@@ -26,7 +26,7 @@ app.post('/api/auth/userinfo', async (req, res) => {
     const userInfo = await getGoogleUserInfo(accessToken);
     res.json({ userInfo });
   } catch (error: any) {
-    res.status(401).json({ error: error.message || 'Unauthorized token' });
+    res.status(401).json({ error: 'EXPIRED_TOKEN', message: error.message || 'Unauthorized token' });
   }
 });
 
@@ -40,7 +40,27 @@ app.post('/api/sheets/sync', async (req, res) => {
     const result = await syncToGoogleSheets(accessToken, data);
     res.json({ success: true, ...result });
   } catch (error: any) {
-    console.error('Sheets Sync Error:', error);
+    const isAuthError =
+      error.code === 401 ||
+      error.status === 401 ||
+      error.response?.status === 401 ||
+      (error.message && (
+        error.message.includes('invalid authentication credentials') ||
+        error.message.includes('Invalid Credentials') ||
+        error.message.includes('Unauthenticated') ||
+        error.message.includes('token') ||
+        error.message.includes('OAuth 2 access token')
+      ));
+
+    if (isAuthError) {
+      console.warn('Sheets Sync: Auth token expired or invalid.');
+      return res.status(401).json({
+        error: 'EXPIRED_TOKEN',
+        message: 'Google 계정 인증이 만료되었거나 유효하지 않습니다. 다시 로그인해 주세요.',
+      });
+    }
+
+    console.error('Sheets Sync Error:', error?.message || error);
     res.status(500).json({ error: error.message || 'Failed to sync to Google Sheets' });
   }
 });
@@ -55,7 +75,27 @@ app.post('/api/sheets/load', async (req, res) => {
     const result = await loadFromGoogleSheets(accessToken);
     res.json({ success: true, ...result });
   } catch (error: any) {
-    console.error('Sheets Load Error:', error);
+    const isAuthError =
+      error.code === 401 ||
+      error.status === 401 ||
+      error.response?.status === 401 ||
+      (error.message && (
+        error.message.includes('invalid authentication credentials') ||
+        error.message.includes('Invalid Credentials') ||
+        error.message.includes('Unauthenticated') ||
+        error.message.includes('token') ||
+        error.message.includes('OAuth 2 access token')
+      ));
+
+    if (isAuthError) {
+      console.warn('Sheets Load: Auth token expired or invalid.');
+      return res.status(401).json({
+        error: 'EXPIRED_TOKEN',
+        message: 'Google 계정 인증이 만료되었거나 유효하지 않습니다. 다시 로그인해 주세요.',
+      });
+    }
+
+    console.error('Sheets Load Error:', error?.message || error);
     res.status(500).json({ error: error.message || 'Failed to load from Google Sheets' });
   }
 });
