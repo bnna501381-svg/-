@@ -111,24 +111,57 @@ export const GoogleLoginModal: React.FC<GoogleLoginModalProps> = ({ isOpen, onLo
   const verifyAndCompleteLogin = async (accessToken: string) => {
     try {
       setStatusMsg('구글 사용자 프로필 확인 중...');
-      const userRes = await fetch('/api/auth/userinfo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accessToken }),
-      });
+      let fetchedEmail = '';
+      let fetchedName = '';
+      let fetchedPicture = '';
 
-      let userInfo = { email: 'user@gmail.com', name: '구글 사용자', picture: '' };
-      if (userRes.ok) {
-        const userData = await userRes.json();
-        userInfo = userData.userInfo || userInfo;
+      // 1. Try fetching via client-side directly
+      try {
+        const directRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (directRes.ok) {
+          const directData = await directRes.json();
+          if (directData?.email) {
+            fetchedEmail = directData.email;
+            fetchedName = directData.name || directData.email;
+            fetchedPicture = directData.picture || '';
+          }
+        }
+      } catch (e) {
+        console.warn('Client userinfo fetch error:', e);
       }
+
+      // 2. If client fetch didn't return email, try backend API
+      if (!fetchedEmail) {
+        try {
+          const userRes = await fetch('/api/auth/userinfo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ accessToken }),
+          });
+          if (userRes.ok) {
+            const userData = await userRes.json();
+            if (userData?.userInfo?.email) {
+              fetchedEmail = userData.userInfo.email;
+              fetchedName = userData.userInfo.name || userData.userInfo.email;
+              fetchedPicture = userData.userInfo.picture || '';
+            }
+          }
+        } catch (e) {
+          console.warn('Backend userinfo fetch error:', e);
+        }
+      }
+
+      const email = fetchedEmail || '구글 계정 연동됨';
+      const name = fetchedName || email;
 
       setStatusMsg('Google Drive / Sheets 연동 완료!');
       setTimeout(() => {
         onLoginSuccess({
-          email: userInfo.email,
-          name: userInfo.name,
-          picture: userInfo.picture,
+          email,
+          name,
+          picture: fetchedPicture,
           accessToken,
         });
         setLoading(false);
@@ -137,8 +170,8 @@ export const GoogleLoginModal: React.FC<GoogleLoginModalProps> = ({ isOpen, onLo
       console.error(err);
       setStatusMsg('로그인 완료, Sheets 동기화를 진행합니다.');
       onLoginSuccess({
-        email: 'user@gmail.com',
-        name: '구글 사용자',
+        email: '구글 계정 연동됨',
+        name: '구글 계정',
         accessToken,
       });
       setLoading(false);
