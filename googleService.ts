@@ -1,5 +1,3 @@
-import { google } from 'googleapis';
-
 export interface SyncDataPayload {
   fridgeItems: any[];
   recipes: any[];
@@ -9,58 +7,61 @@ export interface SyncDataPayload {
   userTarget: any;
 }
 
-export function getGoogleServices(accessToken: string) {
-  const auth = new google.auth.OAuth2();
-  auth.setCredentials({ access_token: accessToken });
-  const drive = google.drive({ version: 'v3', auth });
-  const sheets = google.sheets({ version: 'v4', auth });
-  return { drive, sheets };
-}
-
 // Get user profile from Google OAuth2 token
 export async function getGoogleUserInfo(accessToken: string) {
-  try {
-    const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-    if (!response.ok) {
-      throw new Error(`Failed to fetch user info: ${response.statusText}`);
-    }
-    const data = await response.json();
-    return {
-      email: data.email,
-      name: data.name || data.email,
-      picture: data.picture,
-    };
-  } catch (error: any) {
-    console.error('Error fetching Google User Info:', error);
-    throw error;
+  const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!response.ok) {
+    const errText = await response.text();
+    const err: any = new Error(`Failed to fetch user info (${response.status}): ${errText}`);
+    err.status = response.status;
+    throw err;
   }
+  const data = await response.json();
+  return {
+    email: data.email,
+    name: data.name || data.email,
+    picture: data.picture,
+  };
 }
 
 const SPREADSHEET_NAME = '[다이어트 식단 매니저] 식단_냉장고_데이터';
 
-// Find or Create Spreadsheet on Google Drive
+// Find or Create Spreadsheet on Google Drive via REST API
 export async function getOrCreateSpreadsheet(accessToken: string) {
-  const { drive, sheets } = getGoogleServices(accessToken);
+  const query = encodeURIComponent(`name = '${SPREADSHEET_NAME}' and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false`);
+  const listUrl = `https://www.googleapis.com/drive/v3/files?q=${query}&fields=files(id,name,webViewLink)`;
 
-  // Search for existing file
-  const listRes = await drive.files.list({
-    q: `name = '${SPREADSHEET_NAME}' and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false`,
-    fields: 'files(id, name, webViewLink)',
+  const listRes = await fetch(listUrl, {
+    headers: { Authorization: `Bearer ${accessToken}` },
   });
 
-  if (listRes.data.files && listRes.data.files.length > 0) {
-    const file = listRes.data.files[0];
+  if (!listRes.ok) {
+    const errText = await listRes.text();
+    const err: any = new Error(`Google Drive API error (${listRes.status}): ${errText}`);
+    err.status = listRes.status;
+    throw err;
+  }
+
+  const listData = await listRes.json();
+
+  if (listData.files && listData.files.length > 0) {
+    const file = listData.files[0];
     return {
-      spreadsheetId: file.id!,
-      webViewLink: file.webViewLink || `https://docs.google.com/spreadsheets/d/${file.id}`,
+      spreadsheetId: file.id as string,
+      webViewLink: (file.webViewLink || `https://docs.google.com/spreadsheets/d/${file.id}`) as string,
     };
   }
 
   // Create new Spreadsheet
-  const createRes = await sheets.spreadsheets.create({
-    requestBody: {
+  const createRes = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
       properties: {
         title: SPREADSHEET_NAME,
       },
@@ -71,19 +72,27 @@ export async function getOrCreateSpreadsheet(accessToken: string) {
         { properties: { title: '지출 내역' } },
         { properties: { title: '사용자 프로필' } },
       ],
-    },
+    }),
   });
 
-  const spreadsheetId = createRes.data.spreadsheetId!;
-  const webViewLink = createRes.data.spreadsheetUrl || `https://docs.google.com/spreadsheets/d/${spreadsheetId}`;
+  if (!createRes.ok) {
+    const errText = await createRes.text();
+    const err: any = new Error(`Google Sheets Create API error (${createRes.status}): ${errText}`);
+    err.status = createRes.status;
+    throw err;
+  }
+
+  const createData = await createRes.json();
+  const spreadsheetId = createData.spreadsheetId as string;
+  const webViewLink = (createData.spreadsheetUrl || `https://docs.google.com/spreadsheets/d/${spreadsheetId}`) as string;
 
   // Format Header Rows
-  await initializeSheetsHeader(sheets, spreadsheetId);
+  await initializeSheetsHeader(accessToken, spreadsheetId);
 
   return { spreadsheetId, webViewLink };
 }
 
-async function initializeSheetsHeader(sheets: any, spreadsheetId: string) {
+async function initializeSheetsHeader(accessToken: string, spreadsheetId: string) {
   const headers = [
     {
       range: '냉장고 재료!A1:I1',
@@ -107,19 +116,26 @@ async function initializeSheetsHeader(sheets: any, spreadsheetId: string) {
     },
   ];
 
-  await sheets.spreadsheets.values.batchUpdate({
-    spreadsheetId,
-    requestBody: {
+  const batchRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchUpdate`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
       valueInputOption: 'USER_ENTERED',
       data: headers,
-    },
+    }),
   });
+
+  if (!batchRes.ok) {
+    console.warn('Header init batch update warning:', await batchRes.text());
+  }
 }
 
 // Sync all app data into Google Sheets
 export async function syncToGoogleSheets(accessToken: string, data: SyncDataPayload) {
   const { spreadsheetId, webViewLink } = await getOrCreateSpreadsheet(accessToken);
-  const { sheets } = getGoogleServices(accessToken);
 
   const fridgeRows = [
     ['아이디', '재료명', '카테고리', '수량', '단위', '보관장소', '소비기한', '상태', '등록일'],
@@ -199,10 +215,13 @@ export async function syncToGoogleSheets(accessToken: string, data: SyncDataPayl
     ],
   ];
 
-  // Clear existing and write fresh
-  await sheets.spreadsheets.values.batchUpdate({
-    spreadsheetId,
-    requestBody: {
+  const syncRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchUpdate`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
       valueInputOption: 'USER_ENTERED',
       data: [
         { range: '냉장고 재료!A1:I500', values: fridgeRows },
@@ -211,8 +230,15 @@ export async function syncToGoogleSheets(accessToken: string, data: SyncDataPayl
         { range: '지출 내역!A1:F500', values: shoppingRows },
         { range: '사용자 프로필!A1:J10', values: profileRows },
       ],
-    },
+    }),
   });
+
+  if (!syncRes.ok) {
+    const errText = await syncRes.text();
+    const err: any = new Error(`Google Sheets Batch Sync API error (${syncRes.status}): ${errText}`);
+    err.status = syncRes.status;
+    throw err;
+  }
 
   return { spreadsheetId, webViewLink, updatedSheetsCount: 5 };
 }
@@ -220,24 +246,35 @@ export async function syncToGoogleSheets(accessToken: string, data: SyncDataPayl
 // Load all data from Google Sheets into Application
 export async function loadFromGoogleSheets(accessToken: string) {
   const { spreadsheetId, webViewLink } = await getOrCreateSpreadsheet(accessToken);
-  const { sheets } = getGoogleServices(accessToken);
 
-  const res = await sheets.spreadsheets.values.batchGet({
-    spreadsheetId,
-    ranges: [
-      '냉장고 재료!A2:I500',
-      '추천 레시피!A2:M500',
-      '식사 기록!A2:H500',
-      '지출 내역!A2:F500',
-      '사용자 프로필!A2:J10',
-    ],
+  const ranges = [
+    '냉장고 재료!A2:I500',
+    '추천 레시피!A2:M500',
+    '식사 기록!A2:H500',
+    '지출 내역!A2:F500',
+    '사용자 프로필!A2:J10',
+  ];
+
+  const queryParams = ranges.map((r) => `ranges=${encodeURIComponent(r)}`).join('&');
+  const loadRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchGet?${queryParams}`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
   });
 
-  const valueRanges = res.data.valueRanges || [];
+  if (!loadRes.ok) {
+    const errText = await loadRes.text();
+    const err: any = new Error(`Google Sheets Batch Get API error (${loadRes.status}): ${errText}`);
+    err.status = loadRes.status;
+    throw err;
+  }
+
+  const resData = await loadRes.json();
+  const valueRanges = resData.valueRanges || [];
 
   // Parse Fridge Items
   const fridgeRows = valueRanges[0]?.values || [];
-  const fridgeItems = fridgeRows.map((r) => ({
+  const fridgeItems = fridgeRows.map((r: any) => ({
     id: r[0] || `f-${Math.random().toString(36).substr(2, 9)}`,
     name: r[1] || '',
     category: r[2] || '기타',
@@ -258,7 +295,7 @@ export async function loadFromGoogleSheets(accessToken: string) {
       return fallback;
     }
   };
-  const recipes = recipeRows.map((r) => ({
+  const recipes = recipeRows.map((r: any) => ({
     id: r[0] || `r-${Math.random().toString(36).substr(2, 9)}`,
     title: r[1] || '',
     description: r[2] || '',
@@ -278,7 +315,7 @@ export async function loadFromGoogleSheets(accessToken: string) {
 
   // Parse Logs
   const logRows = valueRanges[2]?.values || [];
-  const logs = logRows.map((r) => ({
+  const logs = logRows.map((r: any) => ({
     id: r[0] || `l-${Math.random().toString(36).substr(2, 9)}`,
     date: r[1] || new Date().toISOString().split('T')[0],
     type: r[2] || '점심',
@@ -291,7 +328,7 @@ export async function loadFromGoogleSheets(accessToken: string) {
 
   // Parse Shopping Items
   const shoppingRows = valueRanges[3]?.values || [];
-  const shoppingList = shoppingRows.map((r) => ({
+  const shoppingList = shoppingRows.map((r: any) => ({
     id: r[0] || `s-${Math.random().toString(36).substr(2, 9)}`,
     name: r[1] || '',
     category: r[2] || '기타',

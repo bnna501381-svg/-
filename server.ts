@@ -7,7 +7,7 @@ import {
   syncToGoogleSheets,
   loadFromGoogleSheets,
   getGoogleUserInfo,
-} from './googleService.js';
+} from './googleService';
 
 dotenv.config();
 
@@ -43,8 +43,12 @@ app.post('/api/sheets/sync', async (req, res) => {
     const isAuthError =
       error.code === 401 ||
       error.status === 401 ||
+      error.status === 403 ||
       error.response?.status === 401 ||
+      error.response?.status === 403 ||
       (error.message && (
+        error.message.includes('401') ||
+        error.message.includes('403') ||
         error.message.includes('invalid authentication credentials') ||
         error.message.includes('Invalid Credentials') ||
         error.message.includes('Unauthenticated') ||
@@ -78,8 +82,12 @@ app.post('/api/sheets/load', async (req, res) => {
     const isAuthError =
       error.code === 401 ||
       error.status === 401 ||
+      error.status === 403 ||
       error.response?.status === 401 ||
+      error.response?.status === 403 ||
       (error.message && (
+        error.message.includes('401') ||
+        error.message.includes('403') ||
         error.message.includes('invalid authentication credentials') ||
         error.message.includes('Invalid Credentials') ||
         error.message.includes('Unauthenticated') ||
